@@ -8,7 +8,7 @@ from pathlib import Path
 
 CHROMA_PATH = 'TowsonDB'
 EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
-MODEL_ID = "meta-llama/Meta-Llama-2-70B-Instruct"
+MODEL_ID = "meta-llama/Meta-Llama-3-70B-Instruct"
 CHAT_TEMPLATE = (
     """<s>[INST] <<SYS>>
     You are an AI Assistant that helps college students navigate Towson University campus. 
