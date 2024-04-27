@@ -53,7 +53,7 @@ def print_results(query, response_text):
     print('-' * 80)
 
 def get_relevant_documents(query, db):
-    search_results = db.similarity_search_with_relevance_scores(query, k=5)
+    search_results = db.similarity_search_with_relevance_scores(query, k=3)
     docs = []
     for result in search_results:
         document, score = result
