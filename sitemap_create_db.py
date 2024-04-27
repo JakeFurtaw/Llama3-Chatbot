@@ -7,46 +7,35 @@ import os
 import shutil
 import torch
 import re
-import fnmatch
 
 SITEMAP_URL = 'https://www.towson.edu/sitemap.xml'
-CHROMA_PATH = 'TowsonDBAlt'
+CHROMA_PATH = 'TowsonDB'
 EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
 
 def main():
     documents = load_docs()
-    cleaned_docs_at_load = parse_docs_at_load(documents)
-    cleaned_docs = parse_docs(cleaned_docs_at_load)
+    cleaned_docs = parse_docs(documents)
     chunks = split_pages(cleaned_docs)
     save_to_db(chunks)
     
 def load_docs():
     print("Loading documents from " + SITEMAP_URL)
-    pdf_filter = [lambda url: not fnmatch.fnmatch(url, '*.pdf')]
-    loader = SitemapLoader(SITEMAP_URL, filter_urls=pdf_filter, continue_on_failure=True, parsing_function=parse_docs_at_load)
+    loader = SitemapLoader(SITEMAP_URL, continue_on_failure=True)
     documents = loader.load()
     print("Number of documents loaded: " + str(len(documents)))
     return documents
 
-def parse_docs_at_load(documents):
-    cleaned_docs_at_load = []
+def parse_docs(documents):
+    print("Cleaning documents...")
+    cleaned_docs = []
     for doc in documents:
-        soup = BeautifulSoup(doc, 'html.parser')
+        content = doc.page_content
+        cleaned_text = re.sub(r'[\s\n\r\t]+', ' ', content)
+        soup = BeautifulSoup(cleaned_text, 'html.parser')
         for div in soup.select('div#skip-to-main, div.row, div.utility, div.main, div.mobile, div.links, div.secondary, div.bottom, div.sidebar, nav.subnavigation, div#subnavigation, div.subnavigation, div.sidebar'):
             div.decompose()
         for noscript_tag in soup.find_all('noscript'):
             noscript_tag.decompose()
-        cleaned_text = soup.get_text(strip=True, separator=" ")
-        cleaned_docs_at_load.append(cleaned_text)
-    return cleaned_docs_at_load
-
-def parse_docs(cleaned_docs_at_load):
-    print("Cleaning documents...")
-    cleaned_docs = []
-    for doc in cleaned_docs_at_load:
-        content = doc.page_content
-        cleaned_text = re.sub(r'[\s\n\r\t]+', ' ', content)
-        soup = BeautifulSoup(cleaned_text, 'html.parser')
         cleaned_text = soup.get_text(strip=True, separator=" ")
         cleaned_docs.append(cleaned_text)
     print("Number of documents cleaned: " + str(len(cleaned_docs)))
