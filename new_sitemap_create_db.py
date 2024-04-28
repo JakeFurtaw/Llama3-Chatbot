@@ -7,30 +7,39 @@ import os
 import shutil
 import torch
 import re
-import fnmatch
 
 SITEMAP_URL = 'https://www.towson.edu/sitemap.xml'
 CHROMA_PATH = 'TowsonDBAlt'
 EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
+URLS = []
 
 def main():
+    get_urls()
     documents = load_docs()
     cleaned_docs_at_load = parse_docs_at_load(documents)
     cleaned_docs = parse_docs(cleaned_docs_at_load)
     chunks = split_pages(cleaned_docs)
     save_to_db(chunks)
-    
+
+def get_urls():
+    with open('/home/jake/Programming/Llama3-Chatbot/URLList/urls.txt', 'r') as f:
+        for line in f:
+            URLS.append(line.strip())
+    return URLS
+
 def load_docs():
     print("Loading documents from " + SITEMAP_URL)
-    loader = SitemapLoader(SITEMAP_URL, continue_on_failure=True, parsing_function=parse_docs_at_load)
-    documents = loader.load()
+    loader = SitemapLoader(SITEMAP_URL, filter_urls=URLS, continue_on_failure=True, parsing_function=parse_docs_at_load)
+    documents = loader.load() 
     print("Number of documents loaded: " + str(len(documents)))
     return documents
 
 def parse_docs_at_load(documents):
     cleaned_docs_at_load = []
-    for doc in documents:
-        soup = BeautifulSoup(doc, 'html.parser')
+    for docs in documents:
+        # if docs.page_content is None:
+        #     documents.remove(docs)
+        soup = BeautifulSoup(docs, 'html.parser')
         for div in soup.select('div#skip-to-main, div.row, div.utility, div.main, div.mobile, div.links, div.secondary, div.bottom, div.sidebar, nav.subnavigation, div#subnavigation, div.subnavigation, div.sidebar'):
             div.decompose()
         for noscript_tag in soup.find_all('noscript'):
