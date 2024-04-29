@@ -11,7 +11,6 @@ import re
 SITEMAP_URL = 'https://www.towson.edu/sitemap.xml'
 CHROMA_PATH = 'TowsonDBAlt'
 EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
-URLS = []
 
 def main():
     documents = load_docs()
@@ -20,18 +19,13 @@ def main():
     chunks = split_pages(cleaned_docs)
     save_to_db(chunks)
 
-# def get_urls():
-#     urls_file = './URLList/urls.txt'
-#     with open(urls_file, 'r') as f:
-#         URLS = [line.strip() for line in f]
-#     print("Number of URLs loaded: " + str(len(URLS)))
-#     return URLS
-
 def load_docs():
     print("Loading documents from " + SITEMAP_URL)
     loader = SitemapLoader(SITEMAP_URL, continue_on_failure=True, parsing_function=parse_docs_at_load)
     documents = loader.load()
     print("Number of documents loaded: " + str(len(documents)))
+    documents = [doc for doc in documents if doc is not None]
+    print("Number of documents kept: " + str(len(documents)))
     return documents
 
 def parse_docs_at_load(documents):
