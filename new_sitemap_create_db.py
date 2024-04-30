@@ -1,12 +1,12 @@
+import os
+import shutil
+import torch
+import re
 from langchain_community.document_loaders.sitemap import SitemapLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.vectorstores.chroma import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from bs4 import BeautifulSoup
-import os
-import shutil
-import torch
-import re
 
 SITEMAP_URL = 'https://www.towson.edu/sitemap.xml'
 CHROMA_PATH = 'TowsonDBAlt'
@@ -18,6 +18,7 @@ def main():
     documents = load_docs()
     cleaned_docs_at_load = parse_docs_at_load(documents)
     cleaned_docs = parse_docs(cleaned_docs_at_load)
+    write_cleaned_docs_to_file(cleaned_docs)
     chunks = split_pages(cleaned_docs)
     save_to_db(chunks)
 
@@ -26,12 +27,13 @@ def get_urls():
     urls_file = './URLList/urls.txt'
     with open(urls_file, 'r') as f:
         urls_from_file = [line.strip() for line in f]
-    URLS.append(urls_from_file)
+    URLS = urls_from_file
     print("Number of URLs loaded: " + str(len(URLS)))
 
 def load_docs():
     print("Loading documents from " + SITEMAP_URL)
-    loader = SitemapLoader(SITEMAP_URL, continue_on_failure=True, parsing_function=parse_docs_at_load)
+    urls_set = set(URLS)
+    loader = SitemapLoader(SITEMAP_URL, filter_urls=urls_set, continue_on_failure=True, parsing_function=parse_docs_at_load)
     documents = loader.load()
     print("Number of documents loaded: " + str(len(documents)))
     return documents
@@ -61,6 +63,12 @@ def parse_docs(cleaned_docs_at_load):
         cleaned_docs.append(cleaned_text)
     print("Number of documents cleaned: " + str(len(cleaned_docs)))
     return cleaned_docs
+
+def write_cleaned_docs_to_file(cleaned_docs):
+    with open("cleaned_docs.txt", "w", encoding="utf-8") as file:
+        for doc in cleaned_docs:
+            file.write(doc + "\n\n")
+    print(f"Cleaned documents written to 'cleaned_docs.txt'.")
 
 def split_pages(cleaned_docs):
     print("Splitting documents into chunks...")
