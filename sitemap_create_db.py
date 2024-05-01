@@ -18,6 +18,14 @@ def main():
     chunks = split_pages(cleaned_docs)
     save_to_db(chunks)
     
+# def get_urls():
+#     global URLS
+#     urls_file = './URLList/urls.txt'
+#     with open(urls_file, 'r') as f:
+#         urls_from_file = [line.strip() for line in f]
+#     URLS = urls_from_file
+#     print("Number of URLs loaded: " + str(len(URLS)))
+
 def load_docs():
     print("Loading documents from " + SITEMAP_URL)
     loader = SitemapLoader(SITEMAP_URL, continue_on_failure=True)
@@ -40,6 +48,12 @@ def parse_docs(documents):
         cleaned_docs.append(cleaned_text)
     print("Number of documents cleaned: " + str(len(cleaned_docs)))
     return cleaned_docs
+
+# def write_cleaned_docs_to_file(cleaned_docs):
+#     with open("cleaned_docs.txt", "w", encoding="utf-8") as file:
+#         for doc in cleaned_docs:
+#             file.write(doc + "\n\n")
+#     print(f"Cleaned documents written to 'cleaned_docs.txt'.")
 
 def split_pages(cleaned_docs):
     print("Splitting documents into chunks...")
