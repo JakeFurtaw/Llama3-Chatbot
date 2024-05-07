@@ -11,8 +11,8 @@ def parse_sitemap(output_dir):
     for url in selector.xpath('//url'):
         location = url.xpath('loc/text()').get()
         modified = url.xpath('lastmod/text()').get()
-        if ".pdf" not in location:
-            urls.append(location + ", ")
+        if ".html" in location:
+            urls.append(location)
         else:
             pdfs.append(location)
     write_list_to_file(output_dir=output_dir, file_name="urls.txt", data=urls)

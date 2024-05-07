@@ -1,56 +1,70 @@
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain.docstore.document import Document
+from langchain_community.document_loaders.sitemap import SitemapLoader
+from langchain.vectorstores.chroma import Chroma
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from bs4 import BeautifulSoup
+from multiprocessing import Pool
 import os
 import shutil
 import torch
 import re
-from langchain_community.document_loaders.sitemap import SitemapLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain.vectorstores.chroma import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from bs4 import BeautifulSoup
 
 SITEMAP_URL = 'https://www.towson.edu/sitemap.xml'
 CHROMA_PATH = 'TowsonDBAlt'
 EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
+PATH_TO_URLS = './URLList/urls.txt'
 
 def main():
-    documents = load_docs()
-    cleaned_docs_at_load = parse_docs_at_load(documents)
-    cleaned_docs = parse_docs(cleaned_docs_at_load)
+    urls= get_urls(PATH_TO_URLS)
+    documents = load_docs(urls)
+    cleaned_docs = parse_docs(documents)
+    write_cleaned_docs_to_file(cleaned_docs)
     chunks = split_pages(cleaned_docs)
     save_to_db(chunks)
 
-def load_docs():
-    print("Loading documents from " + SITEMAP_URL)
-    loader = SitemapLoader(SITEMAP_URL, continue_on_failure=True, parsing_function=parse_docs_at_load)
-    documents = loader.load()
-    print("Number of documents loaded: " + str(len(documents)))
-    documents = [doc for doc in documents if doc is not None]
-    print("Number of documents kept: " + str(len(documents)))
+def get_urls(file_path):
+    urls = []
+    with open(file_path, 'r') as file:
+        urls= file.read().splitlines()
+    print(f"Number of URLs loaded: {len(urls)}")
+    return urls
+
+def load_docs_worker(urls):
+    documents = []
+    loader = SitemapLoader(SITEMAP_URL, filter_urls=urls, continue_on_failure=True, parsing_function=parse_docs)
+    loaded_docs = loader.load()
+    for doc in loaded_docs:
+        content = doc.page_content
+        if doc or content is not None:
+            documents.append(doc)
     return documents
 
-def parse_docs_at_load(documents):
-    cleaned_docs_at_load = []
-    for docs in documents:
-        soup = BeautifulSoup(docs, 'html.parser')
-        for div in soup.select('div#skip-to-main, div.row, div.utility, div.main, div.mobile, div.links, div.secondary, div.bottom, div.sidebar, nav.subnavigation, div#subnavigation, div.subnavigation, div.sidebar'):
-            div.decompose()
-        for noscript_tag in soup.find_all('noscript'):
-            noscript_tag.decompose()
-        cleaned_text = soup.get_text(strip=True, separator=" ")
-        cleaned_docs_at_load.append(cleaned_text)
-    return cleaned_docs_at_load
+def load_docs(urls):
+    print("Loading documents from " + SITEMAP_URL)
+    chunks = [urls[i::20] for i in range(20)]  # Adjust the number 4 based on your system's resources
+    pool = Pool(processes=20)
+    results = pool.map(load_docs_worker, chunks)
+    documents = [doc for result in results for doc in result]
+    print("Number of documents loaded: " + str(len(documents)))
+    return documents
 
-def parse_docs(cleaned_docs_at_load):
-    print("Cleaning documents...")
-    cleaned_docs = []
-    for doc in cleaned_docs_at_load:
-        content = doc.page_content
-        cleaned_text = re.sub(r'[\s\n\r\t]+', ' ', content)
-        soup = BeautifulSoup(cleaned_text, 'html.parser')
-        cleaned_text = soup.get_text(strip=True, separator=" ")
-        cleaned_docs.append(cleaned_text)
-    print("Number of documents cleaned: " + str(len(cleaned_docs)))
-    return cleaned_docs
+def parse_docs(content: BeautifulSoup) -> str:
+    if content is None:
+        return ""
+    soup = BeautifulSoup(content, 'html.parser')
+    for div in soup.select('div#skip-to-main, div.row, div.utility, div.main, div.mobile, div.links, div.secondary, div.bottom, div.sidebar, nav.subnavigation, div#subnavigation, div.subnavigation, div.sidebar'):
+        div.decompose()
+    for noscript_tag in soup.find_all('noscript'):
+        noscript_tag.decompose()
+    souped_text = soup.get_text(strip=True, separator=" ")
+    return str(souped_text)
+
+def write_cleaned_docs_to_file(cleaned_docs):
+    with open("cleaned_docs.txt", "w", encoding="utf-8") as file:
+        for doc in cleaned_docs:
+            file.write(doc + "\n\n")
+    print(f"Cleaned documents written to 'cleaned_docs.txt'.")
 
 def split_pages(cleaned_docs):
     print("Splitting documents into chunks...")
