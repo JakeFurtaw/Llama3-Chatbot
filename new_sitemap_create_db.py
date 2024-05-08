@@ -5,6 +5,7 @@ from langchain.vectorstores.chroma import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from bs4 import BeautifulSoup
 from multiprocessing import Pool
+import requests
 import os
 import shutil
 import torch
@@ -28,21 +29,21 @@ def get_urls(file_path):
     with open(file_path, 'r') as file:
         urls= file.read().splitlines()
     print(f"Number of URLs loaded: {len(urls)}")
+    # for url in urls:
+    #     response = requests.get(url)
+    #     if response.content is None:
+    #         urls.remove(url)
+    #         print(f"URL {url} is not valid. Removing from list.")
     return urls
 
 def load_docs_worker(urls):
-    documents = []
     loader = SitemapLoader(SITEMAP_URL, filter_urls=urls, continue_on_failure=True, parsing_function=parse_docs)
-    loaded_docs = loader.load()
-    for doc in loaded_docs:
-        content = doc.page_content
-        if doc or content is not None:
-            documents.append(doc)
+    documents = loader.load()
     return documents
 
 def load_docs(urls):
     print("Loading documents from " + SITEMAP_URL)
-    chunks = [urls[i::20] for i in range(20)]  # Adjust the number 4 based on your system's resources
+    chunks = [urls[i::20] for i in range(20)]
     pool = Pool(processes=20)
     results = pool.map(load_docs_worker, chunks)
     documents = [doc for result in results for doc in result]
@@ -50,15 +51,14 @@ def load_docs(urls):
     return documents
 
 def parse_docs(content: BeautifulSoup) -> str:
-    if content is None:
-        return ""
-    soup = BeautifulSoup(content, 'html.parser')
-    for div in soup.select('div#skip-to-main, div.row, div.utility, div.main, div.mobile, div.links, div.secondary, div.bottom, div.sidebar, nav.subnavigation, div#subnavigation, div.subnavigation, div.sidebar'):
-        div.decompose()
-    for noscript_tag in soup.find_all('noscript'):
-        noscript_tag.decompose()
-    souped_text = soup.get_text(strip=True, separator=" ")
-    return str(souped_text)
+    if (content is not None) or (type(content) is not None):
+        soup = BeautifulSoup(content, 'html.parser')
+        for div in soup.find_all('div#skip-to-main, div.row, div.utility, div.main, div.mobile, div.links, div.secondary, div.bottom, div.sidebar, nav.subnavigation, div#subnavigation, div.subnavigation, div.sidebar'):
+            div.decompose()
+        for noscript_tag in soup.find_all('noscript'):
+            noscript_tag.decompose()
+        souped_text = soup.get_text(strip=True, separator=" ")
+        return str(souped_text)
 
 def write_cleaned_docs_to_file(cleaned_docs):
     with open("cleaned_docs.txt", "w", encoding="utf-8") as file:
