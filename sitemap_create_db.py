@@ -9,7 +9,7 @@ import torch
 import re
 
 SITEMAP_URL = 'https://www.towson.edu/sitemap.xml'
-CHROMA_PATH = 'TowsonDB'
+CHROMA_PATH = 'TowsonDBAlt'
 EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
 
 def main():
@@ -40,7 +40,8 @@ def parse_docs(documents):
         content = doc.page_content
         cleaned_text = re.sub(r'[\s\n\r\t]+', ' ', content)
         soup = BeautifulSoup(cleaned_text, 'html.parser')
-        for div in soup.select('div#skip-to-main, div.row, div.utility, div.main, div.mobile, div.links, div.secondary, div.bottom, div.sidebar, nav.subnavigation, div#subnavigation, div.subnavigation, div.sidebar'):
+        selectors = ['div#skip-to-main', 'div.row', 'div.utility', 'div.main', 'div.mobile', 'div.links', 'div.secondary', 'div.bottom', 'div.sidebar', 'nav.subnavigation', 'div#subnavigation', 'div.subnavigation', 'div.sidebar']
+        for div in soup.select(' , '.join(selectors)):
             div.decompose()
         for noscript_tag in soup.find_all('noscript'):
             noscript_tag.decompose()

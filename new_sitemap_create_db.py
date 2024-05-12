@@ -5,11 +5,9 @@ from langchain.vectorstores.chroma import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from bs4 import BeautifulSoup
 from multiprocessing import Pool
-import requests
 import os
 import shutil
 import torch
-import re
 
 SITEMAP_URL = 'https://www.towson.edu/sitemap.xml'
 CHROMA_PATH = 'TowsonDBAlt'
@@ -29,11 +27,6 @@ def get_urls(file_path):
     with open(file_path, 'r') as file:
         urls= file.read().splitlines()
     print(f"Number of URLs loaded: {len(urls)}")
-    # for url in urls:
-    #     response = requests.get(url)
-    #     if response.status_code <= 200 and response.status_code > 300:
-    #         urls.remove(url)
-    #         print(f"URL {url} is not valid. Removing from list.")
     return urls
 
 def load_docs_worker(urls):
@@ -51,17 +44,12 @@ def load_docs(urls):
     return documents
 
 def parse_docs(content: BeautifulSoup) -> str:
-    if (content is not None) and (type(content) is not None):
-        soup = BeautifulSoup(content, 'html.parser')
-        selectors = ['div#skip-to-main', 'div.row', 'div.utility', 'div.main', 'div.mobile', 'div.links', 'div.secondary', 'div.bottom', 'div.sidebar', 'nav.subnavigation', 'div#subnavigation', 'div.subnavigation', 'div.sidebar']
-        for div in soup.select(' , '.join(selectors)):
-            div.decompose()
-        for noscript_tag in soup.find_all('noscript'):
-            noscript_tag.decompose()
-        souped_text = soup.get_text(strip=True, separator=" ")
-        print(str(souped_text))
-    else:
-        return ""
+    selectors = ['div#skip-to-main', 'div.row', 'div.utility', 'div.main', 'div.mobile', 'div.links', 'div.secondary', 'div.bottom', 'div.sidebar', 'nav.subnavigation', 'div#subnavigation', 'div.subnavigation', 'div.sidebar']
+    for div in content.find_all(' , '.join(selectors)) + content.find_all('noscript'):
+        div.decompose()
+    souped_text = content.get_text(strip=True, separator=" ")
+    print(souped_text)
+    return str(souped_text)
 
 def write_cleaned_docs_to_file(cleaned_docs):
     with open("cleaned_docs.txt", "w", encoding="utf-8") as file:
