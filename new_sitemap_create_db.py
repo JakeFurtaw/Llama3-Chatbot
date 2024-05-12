@@ -8,6 +8,7 @@ from multiprocessing import Pool
 import os
 import shutil
 import torch
+import re
 
 SITEMAP_URL = 'https://www.towson.edu/sitemap.xml'
 CHROMA_PATH = 'TowsonDBAlt'
@@ -16,10 +17,9 @@ PATH_TO_URLS = './URLList/urls.txt'
 
 def main():
     urls= get_urls(PATH_TO_URLS)
-    documents = load_docs(urls)
-    cleaned_docs = parse_docs(documents)
-    write_cleaned_docs_to_file(cleaned_docs)
-    chunks = split_pages(cleaned_docs)
+    documents= load_docs(urls)
+    write_cleaned_docs_to_file(documents)
+    chunks = split_pages(documents)
     save_to_db(chunks)
 
 def get_urls(file_path):
@@ -45,26 +45,28 @@ def load_docs(urls):
 
 def parse_docs(content: BeautifulSoup) -> str:
     selectors = ['div#skip-to-main', 'div.row', 'div.utility', 'div.main', 'div.mobile', 'div.links', 'div.secondary', 'div.bottom', 'div.sidebar', 'nav.subnavigation', 'div#subnavigation', 'div.subnavigation', 'div.sidebar']
-    for div in content.find_all(' , '.join(selectors)) + content.find_all('noscript'):
+    for div in content.select(' , '.join(selectors)) + content.find_all('noscript'):
         div.decompose()
     souped_text = content.get_text(strip=True, separator=" ")
-    print(souped_text)
+    souped_text = re.sub(r'[\s\n\r\t]+', ' ', souped_text)
+    # print(souped_text)
     return str(souped_text)
 
-def write_cleaned_docs_to_file(cleaned_docs):
+def write_cleaned_docs_to_file(documents):
     with open("cleaned_docs.txt", "w", encoding="utf-8") as file:
-        for doc in cleaned_docs:
-            file.write(doc + "\n\n")
+        for doc in documents:
+            file.write(doc.page_content + "\n\n")
     print(f"Cleaned documents written to 'cleaned_docs.txt'.")
 
-def split_pages(cleaned_docs):
+def split_pages(documents):
     print("Splitting documents into chunks...")
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=250,
         length_function=len
     )
-    chunks = text_splitter.create_documents(cleaned_docs)
+    texts = [doc.page_content for doc in documents]
+    chunks = text_splitter.create_documents(texts)
     print("Number of chunks created: " + str(len(chunks)))
     return chunks
 

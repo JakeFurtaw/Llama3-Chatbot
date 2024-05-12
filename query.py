@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-CHROMA_PATH = 'TowsonDB'
+CHROMA_PATH = 'TowsonDBAlt'
 EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
 MODEL_ID = "meta-llama/Meta-Llama-3-70B-Instruct"
 CHAT_TEMPLATE = (
@@ -58,9 +58,9 @@ def get_relevant_documents(query, db):
     for result in search_results:
         document, score = result
         docs.append(document.page_content.strip())
-        # print(f"Database Results:\n {document.page_content.strip()}")
-        # print(f"Relevance score: {score}")
-        # print("-" * 80)
+        print(f"Database Results:\n {document.page_content.strip()}")
+        print(f"Relevance score: {score}")
+        print("-" * 80)
     return docs
 
 def generate_response(query, context_str):
