@@ -31,7 +31,7 @@ def get_urls(file_path):
     print(f"Number of URLs loaded: {len(urls)}")
     # for url in urls:
     #     response = requests.get(url)
-    #     if response.content is None:
+    #     if response.status_code <= 200 and response.status_code > 300:
     #         urls.remove(url)
     #         print(f"URL {url} is not valid. Removing from list.")
     return urls
@@ -51,14 +51,17 @@ def load_docs(urls):
     return documents
 
 def parse_docs(content: BeautifulSoup) -> str:
-    if (content is not None) or (type(content) is not None):
+    if (content is not None) and (type(content) is not None):
         soup = BeautifulSoup(content, 'html.parser')
-        for div in soup.find_all('div#skip-to-main, div.row, div.utility, div.main, div.mobile, div.links, div.secondary, div.bottom, div.sidebar, nav.subnavigation, div#subnavigation, div.subnavigation, div.sidebar'):
+        selectors = ['div#skip-to-main', 'div.row', 'div.utility', 'div.main', 'div.mobile', 'div.links', 'div.secondary', 'div.bottom', 'div.sidebar', 'nav.subnavigation', 'div#subnavigation', 'div.subnavigation', 'div.sidebar']
+        for div in soup.select(' , '.join(selectors)):
             div.decompose()
         for noscript_tag in soup.find_all('noscript'):
             noscript_tag.decompose()
         souped_text = soup.get_text(strip=True, separator=" ")
-        return str(souped_text)
+        print(str(souped_text))
+    else:
+        return ""
 
 def write_cleaned_docs_to_file(cleaned_docs):
     with open("cleaned_docs.txt", "w", encoding="utf-8") as file:
